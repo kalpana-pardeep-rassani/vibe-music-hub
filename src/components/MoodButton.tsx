@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { motion } from "framer-motion";
 import type { Mood } from "@/data/songs";
 
@@ -22,20 +23,25 @@ const textStyles: Record<Mood, string> = {
   energetic: "text-mood-energetic",
 };
 
-const MoodButton = ({ mood, emoji, label, onClick }: MoodButtonProps) => {
-  return (
-    <motion.button
-      whileHover={{ scale: 1.04 }}
-      whileTap={{ scale: 0.96 }}
-      onClick={() => onClick(mood)}
-      className={`flex flex-col items-center justify-center gap-3 rounded-2xl border p-6 transition-colors ${moodStyles[mood]}`}
-    >
-      <span className="text-4xl">{emoji}</span>
-      <span className={`text-sm font-semibold tracking-wide uppercase ${textStyles[mood]}`}>
-        {label}
-      </span>
-    </motion.button>
-  );
-};
+const MoodButton = forwardRef<HTMLButtonElement, MoodButtonProps>(
+  ({ mood, emoji, label, onClick }, ref) => {
+    return (
+      <motion.button
+        ref={ref}
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.96 }}
+        onClick={() => onClick(mood)}
+        className={`flex flex-col items-center justify-center gap-3 rounded-2xl border p-6 transition-colors ${moodStyles[mood]}`}
+      >
+        <span className="text-4xl">{emoji}</span>
+        <span className={`text-sm font-semibold tracking-wide uppercase ${textStyles[mood]}`}>
+          {label}
+        </span>
+      </motion.button>
+    );
+  }
+);
+
+MoodButton.displayName = "MoodButton";
 
 export default MoodButton;
