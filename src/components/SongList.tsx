@@ -1,5 +1,6 @@
-import { motion } from "framer-motion";
-import { Play, ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Play, Square, ArrowLeft } from "lucide-react";
 import type { Mood, Song } from "@/data/songs";
 import { moodConfig } from "@/data/songs";
 
@@ -23,8 +24,21 @@ const playStyles: Record<Mood, string> = {
   energetic: "bg-mood-energetic/20 text-mood-energetic hover:bg-mood-energetic/30",
 };
 
+const stopStyles: Record<Mood, string> = {
+  happy: "bg-mood-happy/30 text-mood-happy hover:bg-mood-happy/40",
+  sad: "bg-mood-sad/30 text-mood-sad hover:bg-mood-sad/40",
+  chill: "bg-mood-chill/30 text-mood-chill hover:bg-mood-chill/40",
+  energetic: "bg-mood-energetic/30 text-mood-energetic hover:bg-mood-energetic/40",
+};
+
+function getYouTubeId(url: string): string | null {
+  const match = url.match(/[?&]v=([^&]+)/);
+  return match ? match[1] : null;
+}
+
 const SongList = ({ mood, songs, onBack }: SongListProps) => {
   const config = moodConfig[mood];
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null);
 
   return (
     <motion.div
@@ -47,29 +61,59 @@ const SongList = ({ mood, songs, onBack }: SongListProps) => {
       </h2>
 
       <div className="flex flex-col gap-3 mt-2">
-        {songs.map((song, i) => (
-          <motion.div
-            key={song.title}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.08 }}
-            className="flex items-center justify-between rounded-xl border border-border bg-card p-4"
-          >
-            <div className="flex flex-col gap-0.5 min-w-0 mr-3">
-              <span className="font-medium text-foreground truncate">{song.title}</span>
-              <span className="text-sm text-muted-foreground truncate">{song.artist}</span>
-            </div>
-            <a
-              href={song.youtubeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors shrink-0 ${playStyles[mood]}`}
+        {songs.map((song, i) => {
+          const isPlaying = playingIndex === i;
+          const videoId = getYouTubeId(song.youtubeUrl);
+
+          return (
+            <motion.div
+              key={song.title}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.08 }}
+              className="rounded-xl border border-border bg-card overflow-hidden"
             >
-              <Play className="w-3.5 h-3.5" />
-              Play
-            </a>
-          </motion.div>
-        ))}
+              <div className="flex items-center justify-between p-4">
+                <div className="flex flex-col gap-0.5 min-w-0 mr-3">
+                  <span className="font-medium text-foreground truncate">{song.title}</span>
+                  <span className="text-sm text-muted-foreground truncate">{song.artist}</span>
+                </div>
+                <button
+                  onClick={() => setPlayingIndex(isPlaying ? null : i)}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors shrink-0 ${isPlaying ? stopStyles[mood] : playStyles[mood]}`}
+                >
+                  {isPlaying ? (
+                    <><Square className="w-3.5 h-3.5" /> Stop</>
+                  ) : (
+                    <><Play className="w-3.5 h-3.5" /> Play</>
+                  )}
+                </button>
+              </div>
+
+              <AnimatePresence>
+                {isPlaying && videoId && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="aspect-video w-full">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+                        title={song.title}
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen
+                        className="w-full h-full"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          );
+        })}
       </div>
     </motion.div>
   );
