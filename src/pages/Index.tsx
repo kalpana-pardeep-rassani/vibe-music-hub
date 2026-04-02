@@ -3,10 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import MoodButton from "@/components/MoodButton";
 import SongList from "@/components/SongList";
 import { moodSongs, moodConfig, allMoodConfigs, type Mood, type Song } from "@/data/songs";
-import { Music, LogOut, Globe } from "lucide-react";
+import { Music, LogOut, Globe, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMoodHistory } from "@/hooks/useMoodHistory";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const moods: Mood[] = ["happy", "sad", "chill", "energetic", "recommended"];
 
@@ -15,6 +16,7 @@ const Index = () => {
   const [filteredSongs, setFilteredSongs] = useState<Song[]>([]);
   const { user, profile, signOut } = useAuth();
   const { getRecommendedSongs } = useMoodHistory();
+  const navigate = useNavigate();
 
   const language = profile?.preferred_language || "English";
 
@@ -44,10 +46,11 @@ const Index = () => {
           <h1 className="text-2xl font-bold tracking-tight font-display">VibeSync</h1>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Globe className="w-3 h-3" /> {language}
-          </span>
-          <Button variant="ghost" size="sm" onClick={signOut}>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/settings")} title="Settings">
+            <Globe className="w-3.5 h-3.5 mr-1" />
+            <span className="text-xs">{language}</span>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={signOut} title="Sign out">
             <LogOut className="w-4 h-4" />
           </Button>
         </div>
