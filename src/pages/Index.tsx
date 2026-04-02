@@ -46,10 +46,11 @@ const Index = () => {
           <h1 className="text-2xl font-bold tracking-tight font-display">VibeSync</h1>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Globe className="w-3 h-3" /> {language}
-          </span>
-          <Button variant="ghost" size="sm" onClick={signOut}>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/settings")} title="Settings">
+            <Globe className="w-3.5 h-3.5 mr-1" />
+            <span className="text-xs">{language}</span>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={signOut} title="Sign out">
             <LogOut className="w-4 h-4" />
           </Button>
         </div>
