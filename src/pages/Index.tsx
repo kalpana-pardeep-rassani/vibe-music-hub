@@ -16,6 +16,7 @@ const Index = () => {
   const [filteredSongs, setFilteredSongs] = useState<Song[]>([]);
   const { user, profile, signOut } = useAuth();
   const { getRecommendedSongs } = useMoodHistory();
+  const navigate = useNavigate();
 
   const language = profile?.preferred_language || "English";
 
