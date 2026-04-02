@@ -3,10 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import MoodButton from "@/components/MoodButton";
 import SongList from "@/components/SongList";
 import { moodSongs, moodConfig, allMoodConfigs, type Mood, type Song } from "@/data/songs";
-import { Music, LogOut, Globe } from "lucide-react";
+import { Music, LogOut, Globe, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMoodHistory } from "@/hooks/useMoodHistory";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const moods: Mood[] = ["happy", "sad", "chill", "energetic", "recommended"];
 
