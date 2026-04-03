@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import MoodButton from "@/components/MoodButton";
 import SongList from "@/components/SongList";
 import { moodSongs, moodConfig, allMoodConfigs, type Mood, type Song } from "@/data/songs";
-import { Music, LogOut, Globe, Settings } from "lucide-react";
+import { Music, LogOut, Globe, History } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMoodHistory } from "@/hooks/useMoodHistory";
 import { Button } from "@/components/ui/button";
