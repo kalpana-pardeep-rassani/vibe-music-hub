@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import MoodButton from "@/components/MoodButton";
 import SongList from "@/components/SongList";
 import { moodSongs, moodConfig, allMoodConfigs, type Mood, type Song } from "@/data/songs";
-import { Music, LogOut, Globe, Settings } from "lucide-react";
+import { Music, LogOut, Globe, History } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMoodHistory } from "@/hooks/useMoodHistory";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,11 @@ const Index = () => {
           </div>
           <h1 className="text-2xl font-bold tracking-tight font-display">VibeSync</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/history")} title="Mood History">
+            <History className="w-3.5 h-3.5 mr-1" />
+            <span className="text-xs">History</span>
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => navigate("/settings")} title="Settings">
             <Globe className="w-3.5 h-3.5 mr-1" />
             <span className="text-xs">{language}</span>
