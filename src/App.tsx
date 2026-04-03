@@ -45,6 +45,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/settings" element={<Settings />} />
+      <Route path="/history" element={<MoodHistory />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
