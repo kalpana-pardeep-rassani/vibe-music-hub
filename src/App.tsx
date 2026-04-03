@@ -8,6 +8,7 @@ import Index from "./pages/Index.tsx";
 import Auth from "./pages/Auth.tsx";
 import LanguageSelect from "./pages/LanguageSelect.tsx";
 import Settings from "./pages/Settings.tsx";
+import MoodHistory from "./pages/MoodHistory.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
