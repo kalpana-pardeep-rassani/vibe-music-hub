@@ -105,6 +105,7 @@ export const useMoodEntries = (isAdmin: boolean) => {
         return false;
       }
       toast({ title: "Entry deleted" });
+      await fetchEntries();
       return true;
     },
     [toast]
