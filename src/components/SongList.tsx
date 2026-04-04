@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Square, ArrowLeft } from "lucide-react";
+import { Play, Square, ArrowLeft, ExternalLink } from "lucide-react";
 import type { Mood, Song } from "@/data/songs";
 import { allMoodConfigs } from "@/data/songs";
 import { useMoodHistory } from "@/hooks/useMoodHistory";
@@ -36,13 +36,24 @@ const stopStyles: Record<string, string> = {
 };
 
 function getYouTubeId(url: string): string | null {
-  const match = url.match(/[?&]v=([^&]+)/);
-  return match ? match[1] : null;
+  // Handle various YouTube URL formats
+  const patterns = [
+    /[?&]v=([^&]+)/,                          // watch?v=ID
+    /youtu\.be\/([^?&]+)/,                     // youtu.be/ID
+    /embed\/([^?&]+)/,                         // embed/ID
+    /\/v\/([^?&]+)/,                           // /v/ID
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
 }
 
 const SongList = ({ mood, songs, onBack }: SongListProps) => {
   const config = allMoodConfigs[mood];
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
+  const [errorIndexes, setErrorIndexes] = useState<Set<number>>(new Set());
   const { recordPlay } = useMoodHistory();
 
   const handlePlay = (index: number, song: Song) => {
@@ -50,8 +61,17 @@ const SongList = ({ mood, songs, onBack }: SongListProps) => {
       setPlayingIndex(null);
     } else {
       setPlayingIndex(index);
+      setErrorIndexes((prev) => {
+        const next = new Set(prev);
+        next.delete(index);
+        return next;
+      });
       recordPlay(mood, song);
     }
+  };
+
+  const handleIframeError = (index: number) => {
+    setErrorIndexes((prev) => new Set(prev).add(index));
   };
 
   return (
@@ -84,6 +104,7 @@ const SongList = ({ mood, songs, onBack }: SongListProps) => {
         {songs.map((song, i) => {
           const isPlaying = playingIndex === i;
           const videoId = getYouTubeId(song.youtubeUrl);
+          const hasError = errorIndexes.has(i);
 
           return (
             <motion.div
@@ -98,16 +119,27 @@ const SongList = ({ mood, songs, onBack }: SongListProps) => {
                   <span className="font-medium text-foreground truncate">{song.title}</span>
                   <span className="text-sm text-muted-foreground truncate">{song.artist}</span>
                 </div>
-                <button
-                  onClick={() => handlePlay(i, song)}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors shrink-0 ${isPlaying ? (stopStyles[mood] || stopStyles.recommended) : (playStyles[mood] || playStyles.recommended)}`}
-                >
-                  {isPlaying ? (
-                    <><Square className="w-3.5 h-3.5" /> Stop</>
-                  ) : (
-                    <><Play className="w-3.5 h-3.5" /> Play</>
-                  )}
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <a
+                    href={song.youtubeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 rounded-lg px-2 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    title="Open on YouTube"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <button
+                    onClick={() => handlePlay(i, song)}
+                    className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isPlaying ? (stopStyles[mood] || stopStyles.recommended) : (playStyles[mood] || playStyles.recommended)}`}
+                  >
+                    {isPlaying ? (
+                      <><Square className="w-3.5 h-3.5" /> Stop</>
+                    ) : (
+                      <><Play className="w-3.5 h-3.5" /> Play</>
+                    )}
+                  </button>
+                </div>
               </div>
 
               <AnimatePresence>
@@ -119,15 +151,31 @@ const SongList = ({ mood, songs, onBack }: SongListProps) => {
                     transition={{ duration: 0.3 }}
                     className="overflow-hidden"
                   >
-                    <div className="aspect-video w-full">
-                      <iframe
-                        src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-                        title={song.title}
-                        allow="autoplay; encrypted-media"
-                        allowFullScreen
-                        className="w-full h-full"
-                      />
-                    </div>
+                    {hasError ? (
+                      <div className="aspect-video w-full flex flex-col items-center justify-center bg-muted/30 gap-3 p-4">
+                        <p className="text-muted-foreground text-sm">Video unavailable in embed</p>
+                        <a
+                          href={song.youtubeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${playStyles[mood] || playStyles.recommended}`}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          Watch on YouTube
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="aspect-video w-full">
+                        <iframe
+                          src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`}
+                          title={song.title}
+                          allow="autoplay; encrypted-media"
+                          allowFullScreen
+                          className="w-full h-full"
+                          onError={() => handleIframeError(i)}
+                        />
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
