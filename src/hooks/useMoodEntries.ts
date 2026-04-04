@@ -70,6 +70,7 @@ export const useMoodEntries = (isAdmin: boolean) => {
         return false;
       }
       toast({ title: "Entry created" });
+      await fetchEntries();
       return true;
     },
     [user, toast]
@@ -90,6 +91,7 @@ export const useMoodEntries = (isAdmin: boolean) => {
         return false;
       }
       toast({ title: "Entry updated" });
+      await fetchEntries();
       return true;
     },
     [toast]
@@ -103,6 +105,7 @@ export const useMoodEntries = (isAdmin: boolean) => {
         return false;
       }
       toast({ title: "Entry deleted" });
+      await fetchEntries();
       return true;
     },
     [toast]

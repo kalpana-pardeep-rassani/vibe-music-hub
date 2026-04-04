@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Square, ArrowLeft, ExternalLink } from "lucide-react";
 import type { Mood, Song } from "@/data/songs";
@@ -36,12 +36,11 @@ const stopStyles: Record<string, string> = {
 };
 
 function getYouTubeId(url: string): string | null {
-  // Handle various YouTube URL formats
   const patterns = [
-    /[?&]v=([^&]+)/,                          // watch?v=ID
-    /youtu\.be\/([^?&]+)/,                     // youtu.be/ID
-    /embed\/([^?&]+)/,                         // embed/ID
-    /\/v\/([^?&]+)/,                           // /v/ID
+    /[?&]v=([^&#]+)/,
+    /youtu\.be\/([^?&#]+)/,
+    /embed\/([^?&#]+)/,
+    /\/v\/([^?&#]+)/,
   ];
   for (const pattern of patterns) {
     const match = url.match(pattern);
@@ -55,10 +54,23 @@ const SongList = ({ mood, songs, onBack }: SongListProps) => {
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [errorIndexes, setErrorIndexes] = useState<Set<number>>(new Set());
   const { recordPlay } = useMoodHistory();
+  const iframeCheckTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      iframeCheckTimers.current.forEach((timer) => clearTimeout(timer));
+    };
+  }, []);
 
   const handlePlay = (index: number, song: Song) => {
     if (playingIndex === index) {
       setPlayingIndex(null);
+      const timer = iframeCheckTimers.current.get(index);
+      if (timer) {
+        clearTimeout(timer);
+        iframeCheckTimers.current.delete(index);
+      }
     } else {
       setPlayingIndex(index);
       setErrorIndexes((prev) => {
@@ -68,6 +80,13 @@ const SongList = ({ mood, songs, onBack }: SongListProps) => {
       });
       recordPlay(mood, song);
     }
+  };
+
+  const handleIframeLoad = (index: number) => {
+    // Clear any existing timer for this index
+    const existing = iframeCheckTimers.current.get(index);
+    if (existing) clearTimeout(existing);
+    iframeCheckTimers.current.delete(index);
   };
 
   const handleIframeError = (index: number) => {
@@ -108,7 +127,7 @@ const SongList = ({ mood, songs, onBack }: SongListProps) => {
 
           return (
             <motion.div
-              key={song.title}
+              key={song.title + song.artist}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.08 }}
@@ -153,7 +172,7 @@ const SongList = ({ mood, songs, onBack }: SongListProps) => {
                   >
                     {hasError ? (
                       <div className="aspect-video w-full flex flex-col items-center justify-center bg-muted/30 gap-3 p-4">
-                        <p className="text-muted-foreground text-sm">Video unavailable in embed</p>
+                        <p className="text-muted-foreground text-sm">Video unavailable for embedding</p>
                         <a
                           href={song.youtubeUrl}
                           target="_blank"
@@ -172,6 +191,7 @@ const SongList = ({ mood, songs, onBack }: SongListProps) => {
                           allow="autoplay; encrypted-media"
                           allowFullScreen
                           className="w-full h-full"
+                          onLoad={() => handleIframeLoad(i)}
                           onError={() => handleIframeError(i)}
                         />
                       </div>
