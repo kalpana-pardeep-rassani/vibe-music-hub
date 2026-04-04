@@ -91,6 +91,7 @@ export const useMoodEntries = (isAdmin: boolean) => {
         return false;
       }
       toast({ title: "Entry updated" });
+      await fetchEntries();
       return true;
     },
     [toast]
