@@ -70,6 +70,7 @@ export const useMoodEntries = (isAdmin: boolean) => {
         return false;
       }
       toast({ title: "Entry created" });
+      await fetchEntries();
       return true;
     },
     [user, toast]
