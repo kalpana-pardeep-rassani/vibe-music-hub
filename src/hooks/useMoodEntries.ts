@@ -45,36 +45,12 @@ export const useMoodEntries = (isAdmin: boolean) => {
     fetchEntries();
   }, [fetchEntries]);
 
-  // Real-time subscription
+  // Refetch when window regains focus for freshness (realtime removed for security)
   useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel("mood_history_changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "mood_history" },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            const newEntry = payload.new as MoodEntry;
-            if (isAdmin || newEntry.user_id === user.id) {
-              setEntries((prev) => [newEntry, ...prev]);
-            }
-          } else if (payload.eventType === "UPDATE") {
-            setEntries((prev) =>
-              prev.map((e) => (e.id === (payload.new as MoodEntry).id ? (payload.new as MoodEntry) : e))
-            );
-          } else if (payload.eventType === "DELETE") {
-            setEntries((prev) => prev.filter((e) => e.id !== (payload.old as { id: string }).id));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, isAdmin]);
+    const handleFocus = () => fetchEntries();
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [fetchEntries]);
 
   const createEntry = useCallback(
     async (mood: string, songTitle: string, songArtist: string) => {
