@@ -46,13 +46,9 @@ const Index = () => {
       setFilteredSongs(songs);
     } else {
       const langSongs = moodSongs[mood].filter((s) => s.language === language);
-      if (langSongs.length > 0) {
-        // Preferred language first, then other languages fill in for variety / more pages
-        const others = moodSongs[mood].filter((s) => s.language !== language);
-        setFilteredSongs([...langSongs, ...others]);
-      } else {
-        setFilteredSongs(moodSongs[mood]);
-      }
+      // Show ONLY the user's preferred language; fall back to everything only if
+      // there are literally no songs for that language.
+      setFilteredSongs(langSongs.length > 0 ? langSongs : moodSongs[mood]);
     }
     setSelectedMood(mood);
   };
