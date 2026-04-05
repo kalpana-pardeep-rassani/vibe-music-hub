@@ -1,9 +1,52 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ExternalLink, Music2, PlayCircle, X } from "lucide-react";
 import type { Song } from "@/data/songs";
 
+// ── YouTube IFrame API types (minimal) ───────────────────────────────────────
+declare global {
+  interface Window {
+    YT: {
+      Player: new (
+        el: HTMLElement | string,
+        opts: {
+          videoId: string;
+          width?: string | number;
+          height?: string | number;
+          playerVars?: Record<string, string | number>;
+          events?: {
+            onReady?: () => void;
+            onError?: (e: { data: number }) => void;
+          };
+        }
+      ) => { destroy: () => void };
+      loaded: number;
+    };
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+// Load the YT IFrame API once per page session
+let _ytApiPromise: Promise<void> | null = null;
+function loadYTApi(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (window.YT?.loaded) return Promise.resolve();
+  if (_ytApiPromise) return _ytApiPromise;
+  _ytApiPromise = new Promise<void>((resolve) => {
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      prev?.();
+      resolve();
+    };
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(tag);
+  });
+  return _ytApiPromise;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function getYouTubeId(url: string): string | null {
   const m = url.match(/[?&]v=([^&#]+)/) ?? url.match(/youtu\.be\/([^?&#]+)/);
   return m ? m[1] : null;
@@ -18,51 +61,67 @@ interface SongPlayerModalProps {
 
 const SongPlayerModal = ({ song, type, open, onClose }: SongPlayerModalProps) => {
   const [embedBlocked, setEmbedBlocked] = useState(false);
+  const [playerReady, setPlayerReady] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const ytPlayerRef = useRef<{ destroy: () => void } | null>(null);
+
   const videoId = song ? getYouTubeId(song.youtubeUrl) : null;
-  const thumbnail = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+  const thumbnail = videoId
+    ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+    : null;
 
-  // Reset error state whenever a new song is opened
-  useEffect(() => { setEmbedBlocked(false); }, [song?.youtubeUrl]);
+  // Reset state and destroy previous player whenever song / open changes
+  useEffect(() => {
+    setEmbedBlocked(false);
+    setPlayerReady(false);
+    return () => {
+      ytPlayerRef.current?.destroy();
+      ytPlayerRef.current = null;
+    };
+  }, [song?.youtubeUrl, open]);
 
-  // Detect YouTube player errors via IFrame API postMessage.
-  // Error codes:
-  //   2   = invalid param
-  //   5   = HTML5 error
-  //  100  = video not found / removed
-  //  101/150 = embedding disabled by owner
-  // Also use a 6-second timeout: if YouTube never fires onReady the video is broken.
+  // Build the YT.Player after the IFrame API has loaded
+  const initPlayer = useCallback(() => {
+    if (!containerRef.current || !videoId) return;
+    // Clear any previous player markup
+    containerRef.current.innerHTML = "";
+    const el = document.createElement("div");
+    containerRef.current.appendChild(el);
+
+    ytPlayerRef.current = new window.YT.Player(el, {
+      videoId,
+      width: "100%",
+      height: "100%",
+      playerVars: {
+        autoplay: 1,
+        rel: 0,
+        fs: 1,
+        controls: type === "video" ? 1 : 0,
+        modestbranding: 1,
+      },
+      events: {
+        onReady: () => setPlayerReady(true),
+        onError: (e) => {
+          // 100 = video not found/private
+          // 101 & 150 = embedding disabled by the owner
+          if (e.data === 100 || e.data === 101 || e.data === 150) {
+            setEmbedBlocked(true);
+          }
+        },
+      },
+    });
+  }, [videoId, type]);
+
   useEffect(() => {
     if (!open || !videoId) return;
-    setEmbedBlocked(false);
-
-    const timer = setTimeout(() => setEmbedBlocked(true), 6000);
-
-    const handler = (e: MessageEvent) => {
-      if (
-        e.origin !== "https://www.youtube.com" &&
-        e.origin !== "https://www.youtube-nocookie.com"
-      ) return;
-      try {
-        const data = JSON.parse(e.data as string);
-        if (data.event === "onReady") {
-          clearTimeout(timer); // player loaded fine
-        }
-        if (data.event === "onError") {
-          clearTimeout(timer);
-          setEmbedBlocked(true);
-        }
-      } catch { /* ignore */ }
-    };
-    window.addEventListener("message", handler);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("message", handler);
-    };
-  }, [open, videoId]);
+    loadYTApi().then(initPlayer);
+  }, [open, videoId, initPlayer]);
 
   if (!song || !videoId) return null;
 
-  const ytMusicUrl = `https://music.youtube.com/search?q=${encodeURIComponent(`${song.title} ${song.artist}`)}`;
+  const ytMusicUrl = `https://music.youtube.com/search?q=${encodeURIComponent(
+    `${song.title} ${song.artist}`
+  )}`;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -91,7 +150,7 @@ const SongPlayerModal = ({ song, type, open, onClose }: SongPlayerModalProps) =>
 
         {/* ── Player Body ── */}
         {embedBlocked ? (
-          // Fallback — user stays in the app, no forced redirect
+          // Fallback — shown only for genuinely non-embeddable videos
           <div className="flex flex-col items-center gap-5 p-8">
             {thumbnail && (
               <div className="w-44 h-44 rounded-2xl overflow-hidden shadow-xl ring-1 ring-border/20">
@@ -123,37 +182,31 @@ const SongPlayerModal = ({ song, type, open, onClose }: SongPlayerModalProps) =>
           </div>
 
         ) : type === "video" ? (
-          // ── Full video embed ──
+          // ── Video player ──
           <div className="aspect-video w-full bg-black">
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1`}
-              title={song.title}
-              allow="autoplay; encrypted-media; fullscreen"
-              allowFullScreen
-              className="w-full h-full"
+            <div
+              ref={containerRef}
+              className="w-full h-full [&>div]:w-full [&>div]:h-full [&_iframe]:w-full [&_iframe]:h-full"
             />
           </div>
 
         ) : (
-          // ── Audio mode: full iframe runs normally (so autoplay works), album art overlaid on top ──
-          <div className="relative aspect-video w-full bg-black">
-            {/* Real YouTube player underneath — browser sees full visible iframe so audio autoplays */}
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1`}
-              title={song.title}
-              allow="autoplay; encrypted-media; fullscreen"
-              allowFullScreen
-              className="absolute inset-0 w-full h-full"
+          // ── Audio mode: YT player runs underneath, album art overlay on top ──
+          <div className="relative aspect-video w-full bg-black overflow-hidden">
+            {/* Real YouTube player (hidden behind overlay, audio still plays) */}
+            <div
+              ref={containerRef}
+              className="absolute inset-0 w-full h-full [&>div]:w-full [&>div]:h-full [&_iframe]:w-full [&_iframe]:h-full"
             />
-            {/* Album art + info overlay covers the video visually */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/90 backdrop-blur-sm">
+            {/* Album-art overlay */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/90 backdrop-blur-sm pointer-events-none">
               {thumbnail && (
                 <div className="relative w-36 h-36 rounded-2xl overflow-hidden shadow-2xl ring-2 ring-primary/30">
                   <img src={thumbnail} alt={song.title} className="w-full h-full object-cover" />
-                  {/* Animated equalizer overlay on art */}
+                  {/* Animated equaliser bars — only shown once player is ready */}
                   <div className="absolute inset-0 bg-black/35 flex items-end justify-center pb-3">
                     <div className="flex items-end gap-[3px] h-6">
-                      {[0.5, 0.9, 0.4, 1.0, 0.7, 0.5, 0.8].map((h, i) => (
+                      {playerReady && [0.5, 0.9, 0.4, 1.0, 0.7, 0.5, 0.8].map((h, i) => (
                         <motion.div
                           key={i}
                           className="w-[3px] bg-primary rounded-full"
@@ -171,7 +224,7 @@ const SongPlayerModal = ({ song, type, open, onClose }: SongPlayerModalProps) =>
                 <p className="text-white/60 text-xs mt-0.5">{song.artist}</p>
               </div>
               <p className="text-white/30 text-[10px] text-center px-6">
-                Audio playing · scroll down in the player to see controls
+                {playerReady ? "Audio playing" : "Loading…"}
               </p>
             </div>
           </div>
@@ -202,3 +255,4 @@ const SongPlayerModal = ({ song, type, open, onClose }: SongPlayerModalProps) =>
 };
 
 export default SongPlayerModal;
+
