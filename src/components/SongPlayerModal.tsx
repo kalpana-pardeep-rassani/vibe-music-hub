@@ -1,0 +1,204 @@
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ExternalLink, Music2, PlayCircle, X } from "lucide-react";
+import type { Song } from "@/data/songs";
+
+function getYouTubeId(url: string): string | null {
+  const m = url.match(/[?&]v=([^&#]+)/) ?? url.match(/youtu\.be\/([^?&#]+)/);
+  return m ? m[1] : null;
+}
+
+interface SongPlayerModalProps {
+  song: Song | null;
+  type: "video" | "audio";
+  open: boolean;
+  onClose: () => void;
+}
+
+const SongPlayerModal = ({ song, type, open, onClose }: SongPlayerModalProps) => {
+  const [embedBlocked, setEmbedBlocked] = useState(false);
+  const videoId = song ? getYouTubeId(song.youtubeUrl) : null;
+  const thumbnail = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+
+  // Reset error state whenever a new song is opened
+  useEffect(() => { setEmbedBlocked(false); }, [song?.youtubeUrl]);
+
+  // Detect YouTube player errors via IFrame API postMessage.
+  // Error codes:
+  //   2   = invalid param
+  //   5   = HTML5 error
+  //  100  = video not found / removed
+  //  101/150 = embedding disabled by owner
+  // Also use a 6-second timeout: if YouTube never fires onReady the video is broken.
+  useEffect(() => {
+    if (!open || !videoId) return;
+    setEmbedBlocked(false);
+
+    const timer = setTimeout(() => setEmbedBlocked(true), 6000);
+
+    const handler = (e: MessageEvent) => {
+      if (
+        e.origin !== "https://www.youtube.com" &&
+        e.origin !== "https://www.youtube-nocookie.com"
+      ) return;
+      try {
+        const data = JSON.parse(e.data as string);
+        if (data.event === "onReady") {
+          clearTimeout(timer); // player loaded fine
+        }
+        if (data.event === "onError") {
+          clearTimeout(timer);
+          setEmbedBlocked(true);
+        }
+      } catch { /* ignore */ }
+    };
+    window.addEventListener("message", handler);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("message", handler);
+    };
+  }, [open, videoId]);
+
+  if (!song || !videoId) return null;
+
+  const ytMusicUrl = `https://music.youtube.com/search?q=${encodeURIComponent(`${song.title} ${song.artist}`)}`;
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="p-0 gap-0 overflow-hidden max-w-lg border-border/50 bg-card [&>button]:hidden">
+
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
+          <div className="flex items-center gap-3">
+            <div className={`rounded-lg p-1.5 ${type === "audio" ? "bg-primary/15" : "bg-violet-500/10"}`}>
+              {type === "audio"
+                ? <Music2 className="w-4 h-4 text-primary" />
+                : <PlayCircle className="w-4 h-4 text-violet-400" />}
+            </div>
+            <div>
+              <p className="font-semibold text-sm font-display leading-tight">{song.title}</p>
+              <p className="text-xs text-muted-foreground">{song.artist}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-secondary"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* ── Player Body ── */}
+        {embedBlocked ? (
+          // Fallback — user stays in the app, no forced redirect
+          <div className="flex flex-col items-center gap-5 p-8">
+            {thumbnail && (
+              <div className="w-44 h-44 rounded-2xl overflow-hidden shadow-xl ring-1 ring-border/20">
+                <img src={thumbnail} alt={song.title} className="w-full h-full object-cover" />
+              </div>
+            )}
+            <p className="text-muted-foreground text-sm text-center leading-relaxed">
+              This song can't be embedded by its owner.<br />
+              Open it directly on the platform below.
+            </p>
+            <div className="flex gap-3 flex-wrap justify-center">
+              <a
+                href={song.youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors px-4 py-2 rounded-xl text-sm font-medium"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Watch on YouTube
+              </a>
+              <a
+                href={ytMusicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors px-4 py-2 rounded-xl text-sm font-medium"
+              >
+                <Music2 className="w-3.5 h-3.5" /> YouTube Music
+              </a>
+            </div>
+          </div>
+
+        ) : type === "video" ? (
+          // ── Full video embed ──
+          <div className="aspect-video w-full bg-black">
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1`}
+              title={song.title}
+              allow="autoplay; encrypted-media; fullscreen"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          </div>
+
+        ) : (
+          // ── Audio mode: full iframe runs normally (so autoplay works), album art overlaid on top ──
+          <div className="relative aspect-video w-full bg-black">
+            {/* Real YouTube player underneath — browser sees full visible iframe so audio autoplays */}
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1`}
+              title={song.title}
+              allow="autoplay; encrypted-media; fullscreen"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full"
+            />
+            {/* Album art + info overlay covers the video visually */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/90 backdrop-blur-sm">
+              {thumbnail && (
+                <div className="relative w-36 h-36 rounded-2xl overflow-hidden shadow-2xl ring-2 ring-primary/30">
+                  <img src={thumbnail} alt={song.title} className="w-full h-full object-cover" />
+                  {/* Animated equalizer overlay on art */}
+                  <div className="absolute inset-0 bg-black/35 flex items-end justify-center pb-3">
+                    <div className="flex items-end gap-[3px] h-6">
+                      {[0.5, 0.9, 0.4, 1.0, 0.7, 0.5, 0.8].map((h, i) => (
+                        <motion.div
+                          key={i}
+                          className="w-[3px] bg-primary rounded-full"
+                          animate={{ scaleY: [h, 0.2, h] }}
+                          transition={{ duration: 0.6 + i * 0.09, repeat: Infinity, ease: "easeInOut" }}
+                          style={{ height: "100%", transformOrigin: "bottom" }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="text-center">
+                <p className="font-bold text-sm text-white font-display">{song.title}</p>
+                <p className="text-white/60 text-xs mt-0.5">{song.artist}</p>
+              </div>
+              <p className="text-white/30 text-[10px] text-center px-6">
+                Audio playing · scroll down in the player to see controls
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Footer ── */}
+        <div className="flex justify-between items-center px-4 py-2.5 border-t border-border/40">
+          <a
+            href={type === "audio" ? ytMusicUrl : song.youtubeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+          >
+            <ExternalLink className="w-3 h-3" />
+            {type === "audio" ? "Open in YouTube Music" : "Open in YouTube"}
+          </a>
+          <button
+            onClick={onClose}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-secondary"
+          >
+            Close
+          </button>
+        </div>
+
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default SongPlayerModal;

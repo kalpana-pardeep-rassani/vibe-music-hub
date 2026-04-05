@@ -45,12 +45,28 @@ export const useMoodEntries = (isAdmin: boolean) => {
     fetchEntries();
   }, [fetchEntries]);
 
-  // Refetch when window regains focus for freshness (realtime removed for security)
+  // Refetch when window regains focus for freshness
   useEffect(() => {
     const handleFocus = () => fetchEntries();
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
   }, [fetchEntries]);
+
+  // Real-time Supabase subscription
+  useEffect(() => {
+    if (!user) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filter: any = isAdmin
+      ? { event: "*", schema: "public", table: "mood_history" }
+      : { event: "*", schema: "public", table: "mood_history", filter: `user_id=eq.${user.id}` };
+
+    const channel = supabase
+      .channel(`mood_history_rt_${user.id}`)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .on("postgres_changes" as any, filter, () => fetchEntries())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, isAdmin, fetchEntries]);
 
   const createEntry = useCallback(
     async (mood: string, songTitle: string, songArtist: string) => {

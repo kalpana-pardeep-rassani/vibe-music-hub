@@ -24,15 +24,25 @@ const textStyles: Record<string, string> = {
   recommended: "text-primary",
 };
 
+const glowStyles: Record<string, string> = {
+  happy: "hover:shadow-[0_0_20px_rgba(255,196,0,0.25)]",
+  sad: "hover:shadow-[0_0_20px_rgba(60,100,230,0.25)]",
+  chill: "hover:shadow-[0_0_20px_rgba(32,185,141,0.25)]",
+  energetic: "hover:shadow-[0_0_20px_rgba(230,50,110,0.25)]",
+  recommended: "hover:shadow-[0_0_20px_rgba(255,196,0,0.2)]",
+};
+
 const MoodButton = ({ mood, emoji, label, onClick }: MoodButtonProps) => {
   return (
     <motion.button
       whileHover={{ scale: 1.04 }}
       whileTap={{ scale: 0.96 }}
       onClick={() => onClick(mood)}
-      className={`flex flex-col items-center justify-center gap-3 rounded-2xl border p-6 transition-colors ${moodStyles[mood] || moodStyles.recommended}`}
+      className={`flex flex-col items-center justify-center gap-3 rounded-2xl border p-6 transition-all duration-200 ${
+        moodStyles[mood] || moodStyles.recommended
+      } ${glowStyles[mood] || glowStyles.recommended}`}
     >
-      <span className="text-4xl">{emoji}</span>
+      <span className="text-5xl">{emoji}</span>
       <span className={`text-sm font-semibold tracking-wide uppercase ${textStyles[mood] || textStyles.recommended}`}>
         {label}
       </span>

@@ -5,27 +5,37 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Music, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const languages = ["English", "Hindi", "Urdu", "Punjabi", "Spanish"];
 
 const LanguageSelect = () => {
   const { user, refreshProfile } = useAuth();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState("English");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // Name comes from signup metadata; fall back to email prefix
+  const displayName: string =
+    (user?.user_metadata?.full_name as string | undefined) ||
+    user?.email?.split("@")[0] ||
+    "there";
+
   const handleSave = async () => {
     if (!user) return;
     setLoading(true);
+
     const { error } = await supabase
       .from("profiles")
-      .update({ preferred_language: selected })
+      .update({ preferred_language: selected, display_name: displayName })
       .eq("user_id", user.id);
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       await refreshProfile();
+      navigate("/");
     }
     setLoading(false);
   };
@@ -43,7 +53,16 @@ const LanguageSelect = () => {
         <h1 className="text-2xl font-bold tracking-tight font-display">VibeSync</h1>
       </motion.div>
 
-      <div className="flex items-center gap-2 mb-2 mt-6">
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.15 }}
+        className="text-lg font-semibold mt-4 mb-1"
+      >
+        Hey, {displayName.split(" ")[0]}! 👋
+      </motion.p>
+
+      <div className="flex items-center gap-2 mb-2 mt-4">
         <Globe className="w-5 h-5 text-primary" />
         <h2 className="text-lg font-semibold font-display">Choose your language</h2>
       </div>
