@@ -1,16 +1,10 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { Music, Shield, User } from "lucide-react";
+import { Music } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-
-// ──────────────────────────────────────────────
-// Demo credentials — swap these for real accounts
-// ──────────────────────────────────────────────
-const DEMO_ADMIN = { email: "admin@vibemusicapp.com", password: "Admin@123" };
-const DEMO_USER  = { email: "user@vibemusicapp.com",  password: "User@123"  };
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -19,7 +13,9 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [showResend, setShowResend] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,6 +73,24 @@ const Auth = () => {
     setResendLoading(false);
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({ title: "Enter your email", description: "Type your email address above first.", variant: "destructive" });
+      return;
+    }
+    setResetLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/settings`,
+    });
+    if (error) {
+      toast({ title: "Reset failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Password reset email sent!", description: `Check ${email} for a reset link.` });
+      setShowForgotPassword(false);
+    }
+    setResetLoading(false);
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-5 py-10 max-w-md mx-auto">
       <motion.div
@@ -131,6 +145,37 @@ const Auth = () => {
         </Button>
       </motion.form>
 
+      {isLogin && (
+        <button
+          type="button"
+          onClick={() => setShowForgotPassword((v) => !v)}
+          className="mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors self-end"
+        >
+          Forgot password?
+        </button>
+      )}
+
+      {showForgotPassword && isLogin && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-2 w-full rounded-xl border border-border bg-card px-4 py-3 text-center"
+        >
+          <p className="text-xs text-muted-foreground mb-2">
+            Enter your email above and we'll send you a reset link.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleForgotPassword}
+            disabled={resetLoading}
+            className="text-xs"
+          >
+            {resetLoading ? "Sendingâ€¦" : "Send reset email"}
+          </Button>
+        </motion.div>
+      )}
+
       {showResend && email && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -153,58 +198,11 @@ const Auth = () => {
       )}
 
       <button
-        onClick={() => { setIsLogin(!isLogin); setName(""); setShowResend(false); }}
+        onClick={() => { setIsLogin(!isLogin); setName(""); setShowResend(false); setShowForgotPassword(false); }}
         className="mt-6 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}
       </button>
-
-      {/* ── Demo Quick Login ── */}
-      {isLogin && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-8 w-full"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex-1 border-t border-border/40" />
-            <span className="text-[11px] text-muted-foreground/60 uppercase tracking-widest">Demo Accounts</span>
-            <div className="flex-1 border-t border-border/40" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {/* Admin demo */}
-            <button
-              type="button"
-              onClick={() => { setEmail(DEMO_ADMIN.email); setPassword(DEMO_ADMIN.password); }}
-              className="group flex flex-col items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 px-4 py-4 transition-all text-left"
-            >
-              <div className="rounded-full bg-primary/15 p-2 group-hover:bg-primary/25 transition-all">
-                <Shield className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-foreground">Admin</p>
-                <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">Full access · all users</p>
-              </div>
-            </button>
-
-            {/* Regular user demo */}
-            <button
-              type="button"
-              onClick={() => { setEmail(DEMO_USER.email); setPassword(DEMO_USER.password); }}
-              className="group flex flex-col items-center gap-2 rounded-xl border border-border hover:border-border/80 bg-secondary/30 hover:bg-secondary/50 px-4 py-4 transition-all text-left"
-            >
-              <div className="rounded-full bg-secondary p-2 group-hover:bg-secondary/80 transition-all">
-                <User className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-foreground">User</p>
-                <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">Personal stats · own data</p>
-              </div>
-            </button>
-          </div>
-          <p className="text-[11px] text-muted-foreground/50 text-center mt-2">Click a card to fill credentials, then press Log In</p>
-        </motion.div>
-      )}
     </div>
   );
 };

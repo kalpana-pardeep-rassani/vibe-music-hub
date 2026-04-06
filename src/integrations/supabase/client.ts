@@ -9,6 +9,13 @@ const SUPABASE_PUBLISHABLE_KEY =
   import.meta.env.VITE_SUPABASE_ANON_KEY ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyd2dib3diaGdqcW5rZndxYnZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzI2ODAsImV4cCI6MjA5MDYwODY4MH0.MXiauG3rMLQle5yCGwnYZSeldvfJwwgg2LmSp3jJW0U";
 
+if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+  console.warn(
+    "[VibeSync] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY env vars are not set. " +
+    "Using hardcoded fallback values — set these variables in your .env file for production."
+  );
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 

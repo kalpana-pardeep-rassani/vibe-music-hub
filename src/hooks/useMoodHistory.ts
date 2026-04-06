@@ -52,23 +52,23 @@ export const useMoodHistory = () => {
         (s) => s.language === language && !seen.has(s.title)
       );
       for (const s of songs) {
-        if (recommended.length >= 5) break;
+        if (recommended.length >= 20) break;
         recommended.push(s);
         seen.add(s.title);
       }
-      if (recommended.length >= 5) break;
+      if (recommended.length >= 20) break;
     }
 
     // If not enough, fill with any language from top moods
-    if (recommended.length < 5) {
+    if (recommended.length < 20) {
       for (const mood of sortedMoods) {
         const songs = moodSongs[mood].filter((s) => !seen.has(s.title));
         for (const s of songs) {
-          if (recommended.length >= 5) break;
+          if (recommended.length >= 20) break;
           recommended.push(s);
           seen.add(s.title);
         }
-        if (recommended.length >= 5) break;
+        if (recommended.length >= 20) break;
       }
     }
 

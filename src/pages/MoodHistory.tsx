@@ -151,7 +151,16 @@ const MoodHistory = () => {
               className="rounded-xl border border-border bg-card p-4 mb-5 flex flex-col gap-3 overflow-hidden"
             >
               <h3 className="font-semibold text-sm">Add Mood Entry</h3>
-              <Input placeholder="Mood (happy / sad / chill / energetic)" value={newMood}   onChange={(e) => setNewMood(e.target.value)} />
+              <select
+                value={newMood}
+                onChange={(e) => setNewMood(e.target.value)}
+                className="w-full text-sm bg-secondary/50 border border-border/40 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary/40 capitalize"
+              >
+                <option value="" disabled>Select mood…</option>
+                {["happy", "sad", "chill", "energetic"].map((m) => (
+                  <option key={m} value={m} className="capitalize">{m}</option>
+                ))}
+              </select>
               <Input placeholder="Song Title"                              value={newTitle}  onChange={(e) => setNewTitle(e.target.value)} />
               <Input placeholder="Artist"                                  value={newArtist} onChange={(e) => setNewArtist(e.target.value)} />
               <div className="flex gap-2">
@@ -250,7 +259,16 @@ const MoodHistory = () => {
             >
               {editingId === entry.id ? (
                 <div className="flex flex-col gap-3">
-                  <Input value={editMood}   onChange={(e) => setEditMood(e.target.value)}   placeholder="Mood" />
+                  <select
+                    value={editMood}
+                    onChange={(e) => setEditMood(e.target.value)}
+                    className="w-full text-sm bg-secondary/50 border border-border/40 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary/40 capitalize"
+                  >
+                    <option value="" disabled>Select mood…</option>
+                    {["happy", "sad", "chill", "energetic"].map((m) => (
+                      <option key={m} value={m} className="capitalize">{m}</option>
+                    ))}
+                  </select>
                   <Input value={editTitle}  onChange={(e) => setEditTitle(e.target.value)}  placeholder="Song Title" />
                   <Input value={editArtist} onChange={(e) => setEditArtist(e.target.value)} placeholder="Artist" />
                   <div className="flex gap-2">
@@ -276,7 +294,9 @@ const MoodHistory = () => {
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(entry)}>
                           <Pencil className="w-3.5 h-3.5" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive/70 hover:text-destructive" onClick={() => deleteEntry(entry.id)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive/70 hover:text-destructive" onClick={() => {
+                              if (window.confirm("Delete this entry?")) deleteEntry(entry.id);
+                            }}>
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>

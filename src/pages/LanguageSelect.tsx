@@ -5,13 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Music, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 
 const languages = ["English", "Hindi", "Urdu", "Punjabi", "Spanish"];
 
 const LanguageSelect = () => {
   const { user, refreshProfile } = useAuth();
-  const navigate = useNavigate();
   const [selected, setSelected] = useState("English");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -34,8 +32,10 @@ const LanguageSelect = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      // refreshProfile updates the AuthContext state; App.tsx routing reacts
+      // automatically — no explicit navigate() needed (avoids the race condition
+      // where navigate fires before the new profile state has committed).
       await refreshProfile();
-      navigate("/");
     }
     setLoading(false);
   };

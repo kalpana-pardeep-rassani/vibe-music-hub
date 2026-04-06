@@ -79,7 +79,11 @@ const Chat = () => {
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from("chat_messages" as never).delete().eq("id", id);
+    if (!window.confirm("Delete this message?")) return;
+    const { error } = await supabase.from("chat_messages" as never).delete().eq("id", id);
+    if (error) {
+      toast({ title: "Failed to delete", description: error.message, variant: "destructive" });
+    }
   };
 
   if (!tableReady) {
@@ -97,7 +101,7 @@ const Chat = () => {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] lg:h-screen max-w-2xl mx-auto">
+    <div className="flex flex-col h-[calc(100dvh-3.5rem)] lg:h-screen max-w-2xl mx-auto">
       {/* Header */}
       <div className="px-5 py-5 border-b border-border/40 shrink-0">
         <h1 className="text-xl font-bold font-display">Community Chat</h1>

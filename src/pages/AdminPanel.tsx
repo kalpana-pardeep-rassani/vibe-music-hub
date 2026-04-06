@@ -33,8 +33,8 @@ const AdminPanel = () => {
     (async () => {
       setLoading(true);
       const [{ data: profiles }, { data: history }] = await Promise.all([
-        supabase.from("profiles").select("user_id, display_name, preferred_language"),
-        supabase.from("mood_history").select("user_id, mood, created_at"),
+        supabase.from("profiles").select("user_id, display_name, preferred_language").limit(500),
+        supabase.from("mood_history").select("user_id, mood, created_at").limit(2000),
       ]);
 
       if (!profiles) { setLoading(false); return; }
@@ -61,11 +61,11 @@ const AdminPanel = () => {
       setUsers(stats.sort((a, b) => b.entry_count - a.entry_count));
       setLoading(false);
     })();
-  }, [isAdmin, roleLoading, navigate, user]);
+  }, [isAdmin, roleLoading]);
 
   const filtered = users.filter((u) => {
-    const name = (u.display_name || "").toLowerCase();
-    return search === "" || name.includes(search.toLowerCase());
+    const searchName = (u.display_name || "Unnamed").toLowerCase();
+    return search === "" || searchName.includes(search.toLowerCase());
   });
 
   const totalEntries = users.reduce((acc, u) => acc + u.entry_count, 0);

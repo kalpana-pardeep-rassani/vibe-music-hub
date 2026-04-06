@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Home, History, BarChart2, MessageCircle,
+  Home, History, BarChart2,
   Settings, Shield, LogOut, Music, Menu, X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,7 +22,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     { to: "/",          icon: Home,          label: "Home"        },
     { to: "/history",   icon: History,       label: "Mood History" },
     { to: "/dashboard", icon: BarChart2,     label: "Dashboard"   },
-    { to: "/chat",      icon: MessageCircle, label: "Chat"        },
     { to: "/settings",  icon: Settings,      label: "Settings"    },
     ...(isAdmin ? [{ to: "/admin", icon: Shield, label: "Admin Panel" }] : []),
   ];

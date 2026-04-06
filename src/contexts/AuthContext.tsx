@@ -40,25 +40,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    // getSession handles the initial load — we await profile before clearing loading
+    // so the routing guard in App.tsx never sees (user && !profile) as a transient state.
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) await fetchProfile(session.user.id);
+      setLoading(false);
+    });
+
+    // onAuthStateChange handles all *subsequent* changes (sign-in from another tab,
+    // token refresh, sign-out). We intentionally do NOT call setLoading here to
+    // avoid the race where loading becomes false before the profile is fetched.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
+          // setTimeout avoids the Supabase internal mutex deadlock that occurs when
+          // calling supabase client methods synchronously inside this callback.
           setTimeout(() => fetchProfile(session.user.id), 0);
         } else {
           setProfile(null);
         }
-        setLoading(false);
       }
     );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      setLoading(false);
-    });
 
     return () => subscription.unsubscribe();
   }, []);

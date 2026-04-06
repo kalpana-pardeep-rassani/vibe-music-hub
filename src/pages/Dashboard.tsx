@@ -27,7 +27,8 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const [loading, setLoading] = useState(true);
-  const [total, setTotal]       = useState(0);
+  const [total, setTotal]           = useState(0);
+  const [uniqueSongCount, setUniqueSongCount] = useState(0);
   const [moodData, setMoodData] = useState<{ mood: string; count: number }[]>([]);
   const [topSongs, setTopSongs] = useState<{ title: string; count: number }[]>([]);
   const [topMood,  setTopMood]  = useState<string>("");
@@ -37,7 +38,7 @@ const Dashboard = () => {
     if (!user) return;
     (async () => {
       setLoading(true);
-      let q = supabase.from("mood_history").select("mood,song_title,song_artist,created_at");
+      let q = supabase.from("mood_history").select("mood,song_title,song_artist,created_at").limit(500);
       if (!isAdmin) q = q.eq("user_id", user.id);
       const { data } = await q;
       if (!data) { setLoading(false); return; }
@@ -58,6 +59,8 @@ const Dashboard = () => {
         .sort((a, b) => b.count - a.count);
       setMoodData(moodArr);
       setTopMood(moodArr[0]?.mood || "");
+
+      setUniqueSongCount(Object.keys(songCounts).length);
 
       setTopSongs(
         Object.entries(songCounts)
@@ -95,7 +98,7 @@ const Dashboard = () => {
   const statCards = [
     { label: "Total Songs Played", value: total,         icon: Music2,     color: "text-primary" },
     { label: "Top Mood",           value: topMood ? `${MOOD_EMOJI[topMood] || ""} ${topMood}` : "—", icon: Smile, color: "text-yellow-400" },
-    { label: "Unique Songs",       value: topSongs.length > 0 ? Object.keys(Object.fromEntries(topSongs.map((s) => [s.title, 1]))).length : 0, icon: ListMusic, color: "text-emerald-400" },
+    { label: "Unique Songs",       value: uniqueSongCount, icon: ListMusic, color: "text-emerald-400" },
     { label: "Active Days (7d)",   value: weekData.filter((d) => d.count > 0).length, icon: TrendingUp, color: "text-violet-400" },
   ];
 

@@ -89,7 +89,7 @@ export const useMoodEntries = (isAdmin: boolean) => {
       await fetchEntries();
       return true;
     },
-    [user, toast]
+    [user, toast, fetchEntries]
   );
 
   const updateEntry = useCallback(
@@ -110,7 +110,7 @@ export const useMoodEntries = (isAdmin: boolean) => {
       await fetchEntries();
       return true;
     },
-    [toast]
+    [toast, fetchEntries]
   );
 
   const deleteEntry = useCallback(
@@ -124,7 +124,7 @@ export const useMoodEntries = (isAdmin: boolean) => {
       await fetchEntries();
       return true;
     },
-    [toast]
+    [toast, fetchEntries]
   );
 
   return { entries, loading, createEntry, updateEntry, deleteEntry, refetch: fetchEntries };

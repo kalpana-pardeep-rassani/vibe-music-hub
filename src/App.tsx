@@ -11,7 +11,6 @@ import LanguageSelect from "./pages/LanguageSelect.tsx";
 import Settings from "./pages/Settings.tsx";
 import MoodHistory from "./pages/MoodHistory.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
-import Chat from "./pages/Chat.tsx";
 import AdminPanel from "./pages/AdminPanel.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -36,8 +35,10 @@ const AppRoutes = () => {
     );
   }
 
-  // Show language picker only on first login (display_name still equals raw email = never been set)
-  if (profile && profile.display_name === user.email) {
+  // Show language picker when:
+  // 1. Profile hasn't been created yet (null) — e.g. right after email confirmation
+  // 2. display_name hasn't been set yet — equals raw email (the DB trigger default)
+  if (!profile || profile.display_name === user.email) {
     return (
       <Routes>
         <Route path="*" element={<LanguageSelect />} />
@@ -51,7 +52,6 @@ const AppRoutes = () => {
         <Route path="/" element={<Index />} />
         <Route path="/history" element={<MoodHistory />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/chat" element={<Chat />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />
